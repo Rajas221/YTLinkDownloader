@@ -127,7 +127,3 @@ Returns, for each song, its matches sorted by score:
 ## Disclaimer
 
 This tool only finds and links to publicly available pages. It does not download or store media. Use of YouTube and SoundCloud is subject to their own terms of service, and you are responsible for how you use the links it produces. If you obtain music, please do so through licensed routes (the platforms' own apps, artist download pages, Bandcamp, or stores).
-
-## License
-
-Add a license of your choice (for example MIT) as a `LICENSE` file before publishing.
