@@ -1,0 +1,9 @@
+services:
+  song-finder:
+    build: .
+    container_name: song-finder
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./downloads:/app/downloads
+    restart: unless-stopped
