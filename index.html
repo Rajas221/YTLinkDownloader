@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@property --p{syntax:"<number>";inherits:false;initial-value:0}
+/* Palette: Shadow Grey #1E1E24, Blood Red #92140C, Floral White #FFF8F0 */
+:root{
+  --bg:#FFF8F0; --panel:#fffdf9; --soft:#f8eee2; --ink:#1E1E24; --muted:#6c6660; --line:#e8dccd; --track:#e8dccd;
+  --accent:#92140C; --accent-hi:#a8180e; --accent-ink:#FFF8F0; --accent-text:#92140C; --warn:#9a4a12;
+  --yt:#e5352b; --sc:#ff6a00;
+  --r-lg:16px; --r-md:10px;
+  --display:"Bricolage Grotesque",system-ui,sans-serif; --body:"Instrument Sans",system-ui,sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#1E1E24; --panel:#26262e; --soft:#2c2c35; --ink:#FFF8F0; --muted:#a9a39d; --line:#3a3a43; --track:#3a3a43;
+    --accent-text:#ff8a7e; --warn:#f2a07a}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+button,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+
+/* motion */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes fill{from{--p:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{opacity:.55}}
+.rise{animation:rise .6s var(--ease) both;animation-delay:calc(var(--d,0)*100ms)}
+.enter{animation:rise .45s var(--ease) both;animation-delay:calc(var(--i,0)*70ms)}
+
+.wrap{max-width:1100px;margin:0 auto;padding:32px 20px 64px;display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start}
+@media(max-width:820px){.wrap{grid-template-columns:1fr}}
+header{grid-column:1/-1}
+h1{font:700 clamp(32px,5vw,46px)/1.05 var(--display);margin:0 0 8px;letter-spacing:-.02em}
+header p{margin:0;color:var(--muted);max-width:60ch}
+
+.input{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;position:sticky;top:16px}
+@media(max-width:820px){.input{position:static}}
+textarea{display:block;width:100%;height:250px;resize:vertical;border:1px solid var(--line);background:var(--soft);border-radius:var(--r-md);padding:12px;line-height:1.6;transition:border-color .2s,box-shadow .2s}
+textarea::placeholder{color:var(--muted);opacity:.8}
+textarea:focus{outline:none;border-color:var(--accent-text);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-text) 22%,transparent)}
+.meta-row{display:flex;justify-content:space-between;align-items:center;margin:10px 0 14px;font-size:13px;color:var(--muted)}
+.link{background:none;border:0;padding:0;color:var(--accent-text);cursor:pointer;font-weight:500;font-size:13px}
+.link:hover{text-decoration:underline}
+
+.opts{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.chk{display:flex;gap:10px;align-items:center;cursor:pointer;font-size:14px;color:var(--ink);user-select:none}
+.chk input{appearance:none;-webkit-appearance:none;flex:none;width:20px;height:20px;margin:0;border:1.5px solid var(--muted);border-radius:6px;background:transparent;cursor:pointer;display:grid;place-items:center;transition:background .18s,border-color .18s,transform .12s}
+.chk input::after{content:"";width:10px;height:6px;border-left:2px solid var(--accent-ink);border-bottom:2px solid var(--accent-ink);transform:rotate(-45deg) scale(0) translate(1px,-1px);transition:transform .18s var(--ease)}
+.chk:hover input{border-color:var(--accent-text)}
+.chk input:checked{background:var(--accent);border-color:var(--accent)}
+.chk input:checked::after{transform:rotate(-45deg) scale(1) translate(1px,-1px)}
+.chk input:active{transform:scale(.9)}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{height:38px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:transparent;border-radius:var(--r-md);padding:0 14px;cursor:pointer;font-weight:500;white-space:nowrap;transition:background .18s,border-color .18s,transform .12s,box-shadow .18s}
+.btn:hover{background:var(--soft);border-color:var(--muted);transform:translateY(-1px)}
+.btn:active{transform:scale(.97)}
+.btn.sm{height:30px;padding:0 11px;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{background:var(--accent-hi);border-color:var(--accent-hi);box-shadow:0 8px 20px -8px rgba(146,20,12,.8)}
+.btn:disabled{opacity:.55;cursor:default;transform:none}
+
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--track);border-top-color:var(--accent-text);animation:spin .7s linear infinite;flex:none}
+.spin[hidden]{display:none!important}
+.btn.primary .spin{width:14px;height:14px;border-color:rgba(255,248,240,.35);border-top-color:var(--accent-ink)}
+
+#skipped{margin:-6px 0 16px;font-size:13px;color:var(--muted)}
+#skipped summary{cursor:pointer}
+#skipped div{white-space:pre-wrap;margin-top:6px;max-height:140px;overflow:auto;background:var(--soft);border-radius:var(--r-md);padding:8px}
+
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.bar:not([hidden]){animation:rise .4s var(--ease) both}
+.bar .grow{flex:1;min-width:160px}
+.stat{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:var(--r-lg);padding:44px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font:600 18px var(--display);margin-bottom:4px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:12px;overflow:hidden}
+.card.pending{animation:pulse 1.6s ease-in-out infinite}
+.q{padding:12px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.q h3{margin:0;font:600 16px var(--display);overflow-wrap:anywhere}
+.q .meta{font-size:13px;color:var(--muted);white-space:nowrap}
+.via{font-size:12px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.skel{padding:18px 16px;display:flex;gap:12px;align-items:center;color:var(--muted)}
+.skel .spin{width:20px;height:20px}
+.m{display:grid;grid-template-columns:44px 1fr auto;gap:12px;padding:12px 16px;align-items:center;border-bottom:1px solid var(--line)}
+.m:last-child{border-bottom:0}
+.m.best{background:var(--soft)}
+.m:not(.best){padding:9px 16px}
+.ring{--p:0;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c,var(--accent-text)) calc(var(--p)*1%),var(--track) 0)}
+.ring.fresh{animation:fill 1s var(--ease) both}
+.ring span{width:34px;height:34px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font:600 12px var(--body)}
+.best .ring span{background:var(--soft)}
+.m:not(.best) .ring{width:36px;height:36px;justify-self:center}
+.m:not(.best) .ring span{width:28px;height:28px;font-size:11px}
+.t{min-width:0}
+.t a{color:var(--ink);font-weight:600;text-decoration:none;overflow-wrap:anywhere}
+.m.best .t a{font-size:16px}
+.t a:hover{text-decoration:underline}
+.m.weak .t{opacity:.7}
+.sub{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.pf{display:inline-flex;gap:5px;align-items:center;font-weight:500}
+.pf::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.pf.youtube{--c:var(--yt)} .pf.soundcloud{--c:var(--sc)}
+.badge{font-size:12px;background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:1px 9px;font-weight:600}
+.acts{display:flex;gap:6px}
+.pv{grid-column:1/-1;margin-top:2px}
+.pv iframe{width:100%;border:0;border-radius:var(--r-md);display:block}
+.more{width:100%;height:42px;border:0;border-top:1px solid var(--line);background:none;color:var(--accent-text);cursor:pointer;font-weight:500;transition:background .18s}
+.more:hover{background:var(--soft)}
+.err{padding:12px 16px;color:var(--warn);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .25s var(--ease)}
+.toast.on{opacity:1;transform:translateX(-50%)}
+@media(max-width:520px){.m{grid-template-columns:40px 1fr}.acts{grid-column:2}}
+@media(prefers-reduced-motion:reduce){.rise,.enter,.ring.fresh,.card.pending,.bar{animation:none!important}.btn,.chk input,textarea{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="rise" style="--d:0">
+    <h1 style="justify-self: center;">Song Finder</h1>
+    <div style="justify-self: center;">Paste your list, and it finds the best match for each song on YouTube and SoundCloud.</div>
+    <div style="justify-self: center;">Preview them here, then open the track or copy the link.</div>
+  </header>
+
+  <section class="input rise " style="--d:1" aria-label="Song list">
+    <textarea id="list" aria-label="Songs, one per line" placeholder="Paste one song per line, for example:&#10;&#10;Daft Punk - Digital Love&#10;Tame Impala - The Less I Know The Better&#10;Burial - Archangel"></textarea>
+    <div class="meta-row">
+      <span id="count">0 songs</span>
+      <button class="link" id="clear" type="button">Clear</button>
+    </div>
+    <div class="opts">
+      <label class="chk"><input type="checkbox" id="optWeak" checked><span>Hide weak matches (below 60%)</span></label>
+      <label class="chk"><input type="checkbox" id="optPrev"><span>Preview best matches automatically</span></label>
+    </div>
+    <details id="skipped" hidden><summary></summary><div></div></details>
+    <div class="actions">
+      <button class="btn" id="import" type="button">Import file</button>
+      <button class="btn primary" id="go" type="button"><span class="spin" id="goSpin" hidden></span><span id="goLabel">Find songs</span></button>
+    </div>
+    <input type="file" id="file" accept=".txt,.csv,.md,text/plain" hidden>
+  </section>
+
+  <main class="rise" style="--d:2" aria-live="polite">
+    <div id="toolbar" class="bar" hidden>
+      <div class="grow stat"><span class="spin" id="spin" hidden></span><span id="stat"></span></div>
+      <button class="btn sm" id="copyAll" type="button">Copy best links</button>
+      <button class="btn sm" id="csv" type="button">Export CSV</button>
+    </div>
+    <div id="out">
+      <div class="empty"><b>Nothing searched yet</b>Add some songs on the left and press Find songs.</div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = s => s ? `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}` : "";
+const PF = {youtube:"YouTube", soundcloud:"SoundCloud"};
+let rows = [];   // {query, q, matches, status, open, previews:Set, entered, seenDone}
+let running = false;
+
+const updateCount = () => {
+  const n = $("list").value.split("\n").filter(s => s.trim()).length;
+  $("count").textContent = `${n} line${n===1?"":"s"}`;
+};
+$("list").addEventListener("input", updateCount);
+$("clear").onclick = () => { $("list").value = ""; updateCount(); $("skipped").hidden = true; $("list").focus(); };
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("on"),1800); }
+async function copy(text, msg){ try{ await navigator.clipboard.writeText(text); toast(msg);}catch{ toast("Couldn't copy. Select the link manually."); } }
+
+/* ---------- list cleanup ---------- */
+const JUNK_WORDS = /^(play all|play|shuffle|save|share|download|add to queue|radio|more|sort|home|explore|library|search|subscribe|subscribed|songs?|videos?|albums?|singles?|playlists?|about|show more|show less|unavailable|explicit)$/i;
+const isJunk = l => l.length < 2 || /^\d+$/.test(l)
+  || /^\d{1,2}:\d{2}(:\d{2})?$/.test(l)
+  || JUNK_WORDS.test(l)
+  || /\b[\d,.]+[kmb]?\s*(views?|videos?|songs?|tracks?|plays?|likes?|subscribers?)\b/i.test(l)
+  || /last updated|updated on/i.test(l)
+  || /•\s*(album|single|ep|playlist|song|video)\b/i.test(l);
+const TS = String.raw`[\[(]?\d{1,2}:\d{2}(?::\d{2})?[\])]?`;   // 0:00, [3:20], 1:02:15
+const stripTs = s => {
+  const t = s.replace(new RegExp(`^${TS}\\s*[-–—.:)]?\\s+`), "").replace(new RegExp(`\\s+${TS}$`), "").trim();
+  return t || s;
+};
+// trailing "(0:00:36 -", "(0:00:36 - 0:03:20)", "[1:02]", " - 3:20", even with the bracket never closed
+const TS_TAIL = /\s*(?:[-–—]\s*)?[(\[]?\s*\d{1,2}:\d{2}(?::\d{2})?(?:\s*[-–—]\s*(?:\d{1,2}:\d{2}(?::\d{2})?)?)?\s*[)\]]?\s*[-–—]?\s*$/;
+const stripTail = s => s.replace(TS_TAIL, "").trim() || s;
+function parseList(text){
+  const kept = [], skipped = [], seen = new Set();
+  for (const raw of text.split(/\r?\n/)) {
+    const l = stripTail(stripTs(raw.replace(/^\s*(?:\d+[.)]\s+|[-*•]\s+)/, "").replace(/^"|"$/g, "").trim()));
+    if (!l) continue;
+    if (isJunk(l)) { skipped.push(l); continue; }
+    const k = l.toLowerCase(); if (seen.has(k)) continue;
+    seen.add(k); kept.push(l);
+  }
+  return {kept, skipped};
+}
+const toQuery = l => l
+  .replace(/\s\|\s.*$/, "")
+  .replace(/\([^)]*(?:official|video|audio|lyric|visuali[sz]er|mv|hd)[^)]*\)/ig, "")
+  .replace(/(^|[\s-])['‘"“]|['’"”](?=$|[\s|)])/g, "$1")
+  .replace(/\s+/g, " ").trim();
+// Ordered list of queries to try for one line, most specific first
+function candidates(line){
+  const base = toQuery(line);
+  const out = [];
+  const by = base.match(/^(.+)\s+by\s+(.+)$/i);          // "Title by Artist" (splits on the last " by ")
+  const hasDash = /\s[-–—]\s/.test(base);
+  if (by && !hasDash) out.push(`${by[2]} - ${by[1]}`);   // -> "Artist - Title"
+  out.push(base);
+  const noBr = base.replace(/\s*[(\[][^)\]]*[)\]]/g, "").trim();                 // drop (Remix), [Live]
+  out.push(noBr);
+  const noFeat = noBr.replace(/\s+(?:feat\.?|ft\.?|featuring)\s+.*$/i, "").trim();
+  out.push(noFeat);
+  if (by && !hasDash) out.push(by[1].replace(/\s*[(\[][^)\]]*[)\]]/g, "").trim()); // title only, last resort
+  return [...new Set(out.filter(x => x.length > 1))];
+}
+function showSkipped(list){
+  const d = $("skipped");
+  d.hidden = !list.length;
+  d.querySelector("summary").textContent = `${list.length} line${list.length===1?"":"s"} skipped (not songs)`;
+  d.querySelector("div").textContent = list.join("\n");
+}
+
+/* ---------- import ---------- */
+$("import").onclick = () => $("file").click();
+$("file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const txt = await f.text(); e.target.value = "";
+  if (!txt.trim()) { toast("That file is empty."); return; }
+  $("list").value = txt; updateCount();
+  toast(`Imported ${f.name}`);
+  if (!running) $("go").click();
+};
+
+/* ---------- search ---------- */
+function embedSrc(m){
+  if (m.platform === "youtube") {
+    const id = (m.url.match(/[?&]v=([\w-]{11})/) || m.url.match(/youtu\.be\/([\w-]{11})/) || [])[1];
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  }
+  return `https://w.soundcloud.com/player/?url=${encodeURIComponent(m.url)}&color=%2392140c&auto_play=false&show_comments=false`;
+}
+async function fetchMatches(q){
+  const res = await fetch("/search", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({songs:[q]})});
+  if(!res.ok) throw new Error(`Server returned ${res.status}`);
+  const data = await res.json();
+  return (data[0]?.matches || []).map(m => ({...m, score: Math.round(m.score)}));
+}
+// Try each candidate query; stop early on a strong match, otherwise keep the best attempt
+async function searchOne(row){
+  let best = [], bestScore = -1, used = null, lastErr = null;
+  for (const q of (row.cands || [row.query])) {
+    let ms;
+    try { ms = await fetchMatches(q); } catch(e){ lastErr = e; continue; }
+    const top = ms[0]?.score ?? -1;
+    if (top > bestScore) { best = ms; bestScore = top; used = q; }
+    if (top >= 75) break;
+  }
+  if (bestScore < 0 && lastErr) { row.status = "error"; row.error = lastErr.message; return; }
+  row.matches = best; row.usedQuery = used; row.status = "done";
+}
+async function run(list){
+  running = true; $("go").disabled = true;
+  const queue = [...list];
+  const worker = async () => { while(queue.length){ const r = queue.shift(); await searchOne(r); render(); } };
+  await Promise.all([worker(), worker(), worker()]);
+  running = false; $("go").disabled = false; render();
+}
+$("go").onclick = () => {
+  const {kept, skipped} = parseList($("list").value);
+  if(!kept.length){ toast("No song lines found. Check the list."); return; }
+  $("list").value = kept.join("\n"); updateCount(); showSkipped(skipped);
+  rows = kept.map(q => ({query:q, cands:candidates(q), matches:[], status:"pending", open:false, previews:new Set()}));
+  $("toolbar").hidden = false;
+  running = true; render(); run(rows);
+};
+
+/* ---------- render ---------- */
+function matchHTML(r, ri, m, mi){
+  const weak = m.score < 60;
+  const color = m.score >= 85 ? "var(--ink)" : m.score >= 60 ? "var(--accent-text)" : "var(--muted)";
+  const key = `${ri}-${mi}`;
+  const showPrev = r.previews.has(key) || (mi===0 && $("optPrev").checked && !r.previews.has("x"+key));
+  const src = showPrev ? embedSrc(m) : null;
+  return `<div class="m ${mi===0?"best":""} ${weak?"weak":""}">
+    <div class="ring ${r.fresh?"fresh":""}" style="--p:${m.score};--c:${color}" title="Match confidence"><span>${m.score}</span></div>
+    <div class="t">
+      <a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">${esc(m.title)}</a>
+      <div class="sub"><span class="pf ${m.platform}">${PF[m.platform]||m.platform}</span>
+        <span>${esc(m.uploader)}</span>${m.duration?`<span>${fmt(m.duration)}</span>`:""}
+        ${mi===0?'<span class="badge">Best match</span>':""}</div>
+    </div>
+    <div class="acts">
+      <button class="btn sm" data-prev="${key}">${showPrev?"Hide preview":"Preview"}</button>
+      <button class="btn sm" data-copy="${esc(m.url)}">Copy link</button>
+    </div>
+    ${src?`<div class="pv"><iframe src="${src}" height="${m.platform==="youtube"?200:120}" loading="lazy" allow="autoplay; encrypted-media" allowfullscreen title="Preview of ${esc(m.title)}"></iframe></div>`:""}
+  </div>`;
+}
+function render(){
+  const hideWeak = $("optWeak").checked;
+  const done = rows.filter(r => r.status !== "pending").length;
+  $("spin").hidden = !running; $("goSpin").hidden = !running;
+  $("goLabel").textContent = running ? "Searching…" : "Find songs";
+  const found = rows.filter(r => r.matches.some(m => m.score >= 60)).length;
+  $("stat").textContent = running ? `Searching… ${done} of ${rows.length} done`
+    : `${found} of ${rows.length} songs have a solid match`;
+
+  let n = 0;
+  $("out").innerHTML = rows.map((r, ri) => {
+    r.fresh = r.status === "done" && !r.seenDone;
+    let body;
+    if (r.status === "pending") body = `<div class="skel"><span class="spin"></span>Looking on YouTube and SoundCloud…</div>`;
+    else if (r.status === "error") body = `<div class="err"><span>Search failed: ${esc(r.error)}</span><button class="btn sm" data-retry="${ri}">Retry</button></div>`;
+    else {
+      const all = r.matches;
+      const shown = hideWeak ? all.filter(m => m.score >= 60) : all;
+      const list = shown.length ? shown : all.slice(0,1);
+      const visible = r.open ? list : list.slice(0,2);
+      body = !all.length ? `<div class="err">No results on either platform. Try removing extra words from the title.</div>`
+        : visible.map((m, mi) => matchHTML(r, ri, m, mi)).join("")
+          + (list.length > 2 ? `<button class="more" data-more="${ri}">${r.open?"Show fewer":`Show ${list.length-2} more`}</button>` : "")
+          + (!shown.length ? `<div class="err">Only weak matches found. Check the first one before using it.</div>` : "");
+    }
+    const best = r.matches[0];
+    const via = r.usedQuery && r.usedQuery !== r.query ? `<div class="via">Searched as “${esc(r.usedQuery)}”</div>` : "";
+    const enter = r.entered ? "" : ` enter" style="--i:${Math.min(n++,8)}`;
+    return `<article class="card ${r.status==="pending"?"pending":""}${enter}">
+      <div class="q"><div><h3>${esc(r.query)}</h3>${via}</div><span class="meta">${best?`Top match ${best.score}%`:""}</span></div>${body}</article>`;
+  }).join("");
+  rows.forEach(r => { r.entered = true; if (r.status === "done") r.seenDone = true; });
+}
+
+$("out").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  if (b.dataset.copy) return copy(b.dataset.copy, "Link copied");
+  if (b.dataset.more){ const r = rows[+b.dataset.more]; r.open = !r.open; return render(); }
+  if (b.dataset.retry){ const r = rows[+b.dataset.retry]; r.status="pending"; render(); return searchOne(r).then(render); }
+  if (b.dataset.prev){
+    const key = b.dataset.prev, r = rows[+key.split("-")[0]];
+    const auto = key.endsWith("-0") && $("optPrev").checked;
+    if (r.previews.has(key) || (auto && !r.previews.has("x"+key))) { r.previews.delete(key); if(auto) r.previews.add("x"+key); }
+    else { r.previews.add(key); r.previews.delete("x"+key); }
+    render();
+  }
+});
+["optWeak","optPrev"].forEach(id => $(id).addEventListener("change", render));
+
+/* ---------- export ---------- */
+$("copyAll").onclick = () => {
+  const links = rows.filter(r => r.matches[0] && r.matches[0].score >= 60).map(r => r.matches[0].url);
+  links.length ? copy(links.join("\n"), `${links.length} links copied`) : toast("No solid matches to copy yet.");
+};
+$("csv").onclick = () => {
+  const out = [["query","rank","platform","title","uploader","url","score"]];
+  rows.forEach(r => r.matches.slice(0, 3).forEach((m, i) =>
+    out.push([r.query, i + 1, m.platform, m.title, m.uploader, m.url, m.score])));
+  const csv = out.map(r => r.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = "songs.csv"; a.click();
+};
+updateCount();
+</script>
+</body>
+</html>
